@@ -1,53 +1,51 @@
-// main.go
 package main
 
 import (
-    "context"
-    "log"
-    "net"
-    "net/http"
-    "google.golang.org/grpc"
-    "google.golang.org/grpc/reflection"
-    "github.com/prometheus/client_golang/prometheus"
-    "github.com/prometheus/client_golang/prometheus/promhttp"
-    pb "example.com/grpc-go/proto"
+	"encoding/json"
+	"fmt"
+	"net/http"
 )
 
-var (
-    grpcRequests = prometheus.NewCounter(prometheus.CounterOpts{
-        Name: "masters_grpc_requests",
-        Help: "Total number of gRPC requests received",
-    })
-)
-
-type server struct {
-    pb.UnimplementedMasterServiceServer
+// Request represents the expected structure of the incoming request.
+type Request struct {
+	Message string `json:"message"`
 }
 
-func (s *server) GetMasterData(ctx context.Context, req *pb.MasterRequest) (*pb.MasterResponse, error) {
-    grpcRequests.Inc()
-    return &pb.MasterResponse{Data: "Hello " + req.Query}, nil
+// Response represents the structure of the outgoing response.
+type Response struct {
+	Reply string `json:"reply"`
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	// Ensure the request method is POST
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Decode the incoming JSON request
+	var req Request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Create the response
+	res := Response{
+		Reply: fmt.Sprintf("Hello %s", req.Message),
+	}
+
+	// Encode and send the response
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func main() {
-    prometheus.MustRegister(grpcRequests)
-    
-    lis, err := net.Listen("tcp", ":8082")
-    if err != nil {
-        log.Fatalf("failed to listen: %v", err)
-    }
-    s := grpc.NewServer()
-    pb.RegisterMasterServiceServer(s, &server{})
-
-    // Register reflection service on gRPC server.
-    reflection.Register(s)
-
-    go func() {
-        http.Handle("/metrics", promhttp.Handler())
-        http.ListenAndServe(":8080", nil)
-    }()
-
-    if err := s.Serve(lis); err != nil {
-        log.Fatalf("failed to serve: %v", err)
-    }
+	http.HandleFunc("/", handler)
+	fmt.Println("Server is running on port 8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Println("Failed to start server:", err)
+	}
 }
