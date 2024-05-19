@@ -10,5 +10,8 @@ services:
     build:
       context: .
       dockerfile: .Dockerfile
+    ports:
+      - "9082:8082"
+      - "9080:8080"
     networks:
       - masters
