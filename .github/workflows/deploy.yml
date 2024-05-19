@@ -1,0 +1,15 @@
+﻿name: Deploy egop runner
+
+on:
+  push:
+    branches: [ "master", "develop" ]
+
+jobs:
+  
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: docker compose
+        run: docker compose -f docker-compose.yml up --build --detach
