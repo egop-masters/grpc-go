@@ -1,0 +1,17 @@
+﻿# Ignore the Go build artifacts
+main
+*.exe
+*.out
+
+# Ignore the vendor directory (if using vendoring)
+vendor/
+
+# Ignore the Go module cache
+pkg/
+
+# Ignore OS-specific and IDE-specific files
+*.swp
+*.swo
+*.DS_Store
+.vscode/
+.idea/
